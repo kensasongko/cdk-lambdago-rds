@@ -1,21 +1,40 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-import { CdkLambdagoRdsStack } from '../lib/cdk-lambdago-rds-stack';
+
+import { DomainStack } from '../lib/domain-stack';
+import { VpcStack } from '../lib/vpc-stack';
+import { RdsStack } from "../lib/rds-stack";
+import { UsersLambdaStack } from "../lib/users-lambda-stack";
+import { ApigatewayStack } from "../lib/apigateway-stack";
+
+const env = { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION };
 
 const app = new cdk.App();
-new CdkLambdagoRdsStack(app, 'CdkLambdagoRdsStack', {
-  /* If you don't specify 'env', this stack will be environment-agnostic.
-   * Account/Region-dependent features and context lookups will not work,
-   * but a single synthesized template can be deployed anywhere. */
 
-  /* Uncomment the next line to specialize this stack for the AWS Account
-   * and Region that are implied by the current CLI configuration. */
-  // env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
+const domainStack = new DomainStack(app, 'DomainStack', {env: env});
 
-  /* Uncomment the next line if you know exactly what Account and Region you
-   * want to deploy the stack to. */
-  // env: { account: '123456789012', region: 'us-east-1' },
+const vpcStack = new VpcStack(app, 'VpcStack', {env: env});
 
-  /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
+const rdsStack = new RdsStack(app, 'RdsStack', {
+  vpc: vpcStack.vpc,
+  env: env
 });
+rdsStack.addDependency(vpcStack);
+
+const usersLambdaStack = new UsersLambdaStack(app, 'UsersLambdaStack', { 
+  vpc: vpcStack.vpc,
+  rdsAccessSg: rdsStack.accessSg,
+  rdsUserSecret: rdsStack.userSecret,
+  env: env, 
+});
+usersLambdaStack.addDependency(vpcStack);
+usersLambdaStack.addDependency(rdsStack);
+
+const apigatewayStack = new ApigatewayStack(app, 'ApigatewayStack', {
+  env: env,
+  zone: domainStack.zone,
+  usersLambda: usersLambdaStack.handler,
+});
+apigatewayStack.addDependency(domainStack);
+apigatewayStack.addDependency(usersLambdaStack);

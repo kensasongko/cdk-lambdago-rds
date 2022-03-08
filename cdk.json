@@ -27,6 +27,11 @@
     "@aws-cdk/core:target-partitions": [
       "aws",
       "aws-cn"
-    ]
+    ],
+
+    "vpcCdir": "10.20.0.0/16",
+    "hostedZone": "cloudkeong.com",
+    "apigatewaySubdomain": "api01",
+    "databaseName": "test01"
   }
 }
