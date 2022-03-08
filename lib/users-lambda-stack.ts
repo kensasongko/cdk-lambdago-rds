@@ -3,7 +3,6 @@ import * as path from 'path';
 import { Construct } from "constructs";
 import { Stack, StackProps, DockerImage, Duration } from 'aws-cdk-lib'; import * as lambdago from "@aws-cdk/aws-lambda-go-alpha";
 import * as lambda from "aws-cdk-lib/aws-lambda";
-//import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as rds from 'aws-cdk-lib/aws-rds';
 
@@ -22,23 +21,11 @@ export class UsersLambdaStack extends Stack {
 
     const databaseName = this.node.tryGetContext('databaseName');
 
-    /*
-    const lambdaRole = new iam.Role(this, 'lambdaWithRdsAccess', {
-        roleName: 'lambdaWithRdsAccess',
-        assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
-        managedPolicies: [
-            iam.ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaVPCAccessExecutionRole"),
-            iam.ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")
-        ]
-    })
-    */
-
     const lambdaPath = path.join(__dirname, '../sources/users/src');
     this.handler = new lambdago.GoFunction(this, 'UsersHandler', {
       //runtime: lambdago.Runtime.GO_1_X,
       entry: lambdaPath,
       functionName: 'UsersHandler',
-      //role: lambdaRole,
       // Enable X-Ray tracing.
       tracing: lambda.Tracing.ACTIVE,
       timeout: Duration.seconds(30),
