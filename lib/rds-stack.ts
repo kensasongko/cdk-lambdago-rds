@@ -9,7 +9,6 @@ interface RdsStackProps extends StackProps {
 }
 
 export class RdsStack extends Stack {
-  public readonly accessSg: ec2.SecurityGroup;
   public readonly cluster: rds.ServerlessCluster;
   public readonly userSecret: rds.DatabaseSecret;
 
@@ -17,26 +16,14 @@ export class RdsStack extends Stack {
     super(scope, id, props);
 
     const { vpc } = props;
-    
-    // Define RDS Security Group and Security Group to access RDS.
-    // Easier albeit worse alternative is to allow connection from any IP using:
-    // cluster.connections.allowFromAnyIpv4(ec2.Port.(5432))
-    this.accessSg = new ec2.SecurityGroup(this, 'RdsAccessSG', {
-      vpc: vpc,
-    });
-
-    const rdsSg = new ec2.SecurityGroup(this, 'RdsSG', {
-      vpc: vpc,
-    });
-    rdsSg.addIngressRule(this.accessSg, ec2.Port.tcp(5432), "Allow database access");
 
     const databaseName = this.node.tryGetContext('databaseName');
 
-    const cluster = new rds.ServerlessCluster(this, 'RdsCluster', {
+    this.cluster = new rds.ServerlessCluster(this, 'RdsCluster', {
       engine: rds.DatabaseClusterEngine.AURORA_POSTGRESQL,
       vpc,
       vpcSubnets: {
-        subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
+        subnetType: ec2.SubnetType.PUBLIC,
       },
       parameterGroup: rds.ParameterGroup.fromParameterGroupName(this, 'ParameterGroup', 'default.aurora-postgresql10'),
       defaultDatabaseName: databaseName,
@@ -50,9 +37,6 @@ export class RdsStack extends Stack {
         minCapacity: rds.AuroraCapacityUnit.ACU_2,
         maxCapacity: rds.AuroraCapacityUnit.ACU_8,
       },
-      securityGroups: [
-        rdsSg
-      ],
       backupRetention: Duration.days(1), // Change this!
       removalPolicy: RemovalPolicy.DESTROY, // Change this!
     });
@@ -60,11 +44,11 @@ export class RdsStack extends Stack {
     this.userSecret = new rds.DatabaseSecret(this, 'postgresUser', {
       username: 'rdsuser',
       secretName: 'rdsuser',
-      masterSecret: cluster.secret,
+      masterSecret: this.cluster.secret,
     });
-    const rdsUserSecretAttached = this.userSecret.attach(cluster); // Adds DB connections information in the secret
+    const rdsUserSecretAttached = this.userSecret.attach(this.cluster); // Adds DB connections information in the secret
 
-    cluster.addRotationMultiUser('postgresUser', { // Add rotation using the multi user scheme
+    this.cluster.addRotationMultiUser('postgresUser', { // Add rotation using the multi user scheme
       secret: rdsUserSecretAttached,
       automaticallyAfter: Duration.days(1), // Change this?
     });

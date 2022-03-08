@@ -23,12 +23,10 @@ const rdsStack = new RdsStack(app, 'RdsStack', {
 rdsStack.addDependency(vpcStack);
 
 const usersLambdaStack = new UsersLambdaStack(app, 'UsersLambdaStack', { 
-  vpc: vpcStack.vpc,
-  rdsAccessSg: rdsStack.accessSg,
+  rdsCluster: rdsStack.cluster,
   rdsUserSecret: rdsStack.userSecret,
   env: env, 
 });
-usersLambdaStack.addDependency(vpcStack);
 usersLambdaStack.addDependency(rdsStack);
 
 const apigatewayStack = new ApigatewayStack(app, 'ApigatewayStack', {

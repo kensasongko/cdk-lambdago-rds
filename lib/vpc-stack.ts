@@ -32,11 +32,5 @@ export class VpcStack extends Stack {
         },
       ],
     });
-
-    new ec2.InterfaceVpcEndpoint(this, 'SecretsManagerEndpoint', {
-      vpc: this.vpc,
-      service: new ec2.InterfaceVpcEndpointService('com.amazonaws.' + env?.region + '.secretsmanager', 443),
-      privateDnsEnabled: true,
-    });
   }
 }
