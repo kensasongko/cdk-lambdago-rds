@@ -1,7 +1,8 @@
 import * as path from 'path';
 
 import { Construct } from "constructs";
-import { Stack, StackProps, DockerImage, Duration } from 'aws-cdk-lib'; import * as lambdago from "@aws-cdk/aws-lambda-go-alpha";
+import { Stack, StackProps, DockerImage, Duration } from 'aws-cdk-lib';
+import * as lambdago from "@aws-cdk/aws-lambda-go-alpha";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as rds from 'aws-cdk-lib/aws-rds';
@@ -29,8 +30,6 @@ export class UsersLambdaStack extends Stack {
       // Enable X-Ray tracing.
       tracing: lambda.Tracing.ACTIVE,
       timeout: Duration.seconds(30),
-      // If Lambda must be attached to VPC to access RDS
-      // The other alternative is to use RDS Data API or Public RDS
       environment: {
         "RDS_SECRET_ARN": rdsUserSecret.secretArn,
         "RDS_DBNAME": databaseName,

@@ -1,23 +1,33 @@
-import { Construct } from 'constructs';
-import { Stack, StackProps, CfnOutput, RemovalPolicy, Duration } from 'aws-cdk-lib';
+import { Construct, IConstruct } from 'constructs';
+import { Stack, CfnOutput, RemovalPolicy, Duration } from 'aws-cdk-lib';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as rds from 'aws-cdk-lib/aws-rds';
 
 
-interface RdsStackProps extends StackProps {
-  vpc: ec2.Vpc;
+interface DatabaseConstructProps {
+  removalPolicy: RemovalPolicy,
+  rdsScalingAutoPauseMinutes: Duration,
+  rdsScalingMinCapacity: rds.AuroraCapacityUnit,
+  rdsScalingMaxCapacity: rds.AuroraCapacityUnit,
+  rdsBackupRetentionDays: Duration,
+  rdsSecretRotationDays: Duration,
 }
 
-export class RdsStack extends Stack {
+export class DatabaseConstruct extends Construct {
   public readonly cluster: rds.ServerlessCluster;
   public readonly userSecret: rds.DatabaseSecret;
 
-  constructor(scope: Construct, id: string, props: RdsStackProps) {
-    super(scope, id, props);
-
-    const { vpc } = props;
+  constructor(scope: Stack, id: string, props: DatabaseConstructProps) {
+    super(scope, id);
 
     const databaseName = this.node.tryGetContext('databaseName');
+
+    const vpcId = ssm.StringParameter.valueFromLookup(this, '/Cdk/Core/VpcId');
+    console.log(vpcId);
+    const vpc = ec2.Vpc.fromLookup(this, 'vpc', { vpcId: vpcId});
+    //console.log(vpc);
+
 
     this.cluster = new rds.ServerlessCluster(this, 'RdsCluster', {
       engine: rds.DatabaseClusterEngine.AURORA_POSTGRESQL,
@@ -33,12 +43,12 @@ export class RdsStack extends Stack {
       }),
       scaling: {
         // https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless.how-it-works.html#aurora-serverless.how-it-works.auto-scaling
-        autoPause: Duration.minutes(5),
-        minCapacity: rds.AuroraCapacityUnit.ACU_2,
-        maxCapacity: rds.AuroraCapacityUnit.ACU_8,
+        autoPause: props.rdsScalingAutoPauseMinutes,
+        minCapacity: props.rdsScalingMinCapacity,
+        maxCapacity: props.rdsScalingMaxCapacity,
       },
-      backupRetention: Duration.days(1), // Change this!
-      removalPolicy: RemovalPolicy.DESTROY, // Change this!
+      backupRetention: props.rdsBackupRetentionDays,
+      removalPolicy: props.removalPolicy,
     });
 
     this.userSecret = new rds.DatabaseSecret(this, 'postgresUser', {
@@ -50,7 +60,7 @@ export class RdsStack extends Stack {
 
     this.cluster.addRotationMultiUser('postgresUser', { // Add rotation using the multi user scheme
       secret: rdsUserSecretAttached,
-      automaticallyAfter: Duration.days(1), // Change this?
+      automaticallyAfter: props.rdsSecretRotationDays, // Change this?
     });
 
     new CfnOutput(this, 'RdsSecretArn', { value: this.userSecret.secretArn});
