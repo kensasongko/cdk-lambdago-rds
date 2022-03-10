@@ -6,41 +6,39 @@ import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as targets from 'aws-cdk-lib/aws-route53-targets';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 
-interface ApigatewayStackProps extends StackProps {
-  zone: route53.PublicHostedZone
+interface ApigatewayConstructProps {
   usersLambda: lambda.GoFunction;
 }
 
-export class ApigatewayStack extends Stack {
+export class ApigatewayConstruct extends Construct {
+  constructor(scope: Stack, id: string, props: ApigatewayConstructProps) {
+    super(scope, id);
 
-  constructor(scope: Construct, id: string, props: ApigatewayStackProps) {
-    super(scope, id, props);
+    const domain = ssm.StringParameter.valueFromLookup(this, '/cdk/bootstrap/domain');
+    const apigatewaySubdomain = ssm.StringParameter.valueFromLookup(this, '/cdk/bootstrap/apigateway-subdomain');
+    const certificateArn = ssm.StringParameter.valueFromLookup(this, '/cdk/core/wildcard-certificate-arn');
 
-    const { env, zone, usersLambda } = props;
-
-    const hostedZone = this.node.tryGetContext('hostedZone');
-    const apigatewaySubdomain = this.node.tryGetContext('apigatewaySubdomain');
-    const apigatewayDomain = apigatewaySubdomain + '.' + hostedZone;
-
-    const certificate = new acm.DnsValidatedCertificate(this, 'ApigatewayCert', {
-      domainName: apigatewayDomain,
-      hostedZone: zone,
-      region: env?.region,
+    const zone = route53.HostedZone.fromLookup(this, 'Zone', {
+      domainName: domain,
     });
 
-    const api = new apigateway.RestApi(this, "demo-api", {
-      restApiName: 'Demo Service',
+    const apigatewayDomain = apigatewaySubdomain + '.' + domain;
+    const certificate = acm.Certificate.fromCertificateArn(this, 'DomainCert', certificateArn);
+
+    const api = new apigateway.RestApi(this, "LambdagoApigateway", {
+      restApiName: 'lambdago-apigateway',
       domainName: {
         domainName: apigatewayDomain,
         certificate: certificate,
       },
     });
 
-    const usersLambdaIntegration = new apigateway.LambdaIntegration(usersLambda);  
+    const usersLambdaIntegration = new apigateway.LambdaIntegration(props.usersLambda);  
     api.root.addResource('users').addMethod('GET', usersLambdaIntegration);
 
-    new route53.ARecord(this, 'CustomDomainAliasRecord', {
+    new route53.ARecord(this, 'ApigatewayAlias', {
       zone: zone,
       recordName: apigatewayDomain,
       target: route53.RecordTarget.fromAlias(new targets.ApiGateway(api))

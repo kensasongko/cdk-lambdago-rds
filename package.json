@@ -8,8 +8,7 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
-    "cdk": "cdk",
-    "context-init": "cdk -a 'npx ts-node bin/context-init.ts' synth -all"
+    "cdk": "cdk"
   },
   "devDependencies": {
     "@types/jest": "^26.0.10",

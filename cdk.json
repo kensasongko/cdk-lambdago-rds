@@ -27,24 +27,6 @@
     "@aws-cdk/core:target-partitions": [
       "aws",
       "aws-cn"
-    ],
-
-    "dev": {
-      "removalPolicy": "DESTROY",
-      "rdsScalingAutoPauseMinutes": 5,
-      "rdsScalingMinCapacity": "ACU_2",
-      "rdsScalingMaxCapacity": "ACU_8",
-      "rdsBackupRetentionDays": 1,
-      "rdsSecretRotationDays": 1
-    },
-
-    "prod": {
-      "removalPolicy": "RETAIN",
-      "rdsScalingAutoPauseMinutes": 10,
-      "rdsScalingMinCapacity": "ACU_4",
-      "rdsScalingMaxCapacity": "ACU_16",
-      "rdsBackupRetentionDays": 30,
-      "rdsSecretRotationDays": 14 
-    }
+    ]
   }
 }

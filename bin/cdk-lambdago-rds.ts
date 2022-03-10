@@ -2,53 +2,64 @@
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import * as rds from 'aws-cdk-lib/aws-rds';
+import * as ec2 from "aws-cdk-lib/aws-ec2";
 
 import { PersistenceStack } from '../lib/persistence-stack';
-//import { ComputeStack } from '../lib/compute-stack';
+import { ComputeStack } from '../lib/compute-stack';
 //import { MonitoringStack } from "../lib/monitoring-stack";
 
 const env = { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION };
+const devEnv = env;
+const prodEnv = env;
 
 const app = new cdk.App();
 
-const config = app.node.tryGetContext('config');
-const envConfig = app.node.tryGetContext(config);
-const deployConfig = {
-  removalPolicy: cdk.RemovalPolicy[(envConfig['removalPolicy']) as keyof typeof cdk.RemovalPolicy],
-  rdsScalingAutoPauseMinutes: cdk.Duration.minutes(envConfig['rdsScalingAutoPauseMinutes']),
-  rdsScalingMinCapacity: rds.AuroraCapacityUnit[(envConfig['rdsScalingMinCapacity']) as keyof typeof rds.AuroraCapacityUnit],
-  rdsScalingMaxCapacity: rds.AuroraCapacityUnit[(envConfig['rdsScalingMaxCapacity']) as keyof typeof rds.AuroraCapacityUnit],
-  rdsBackupRetentionDays: cdk.Duration.days(envConfig['rdsBackupRetentionDays']),
-  rdsSecretRotationDays: cdk.Duration.days(envConfig['rdsSecretRotationDays']),
-}
-console.log(deployConfig);
-
-const persistenceStack = new PersistenceStack(app, 'PersistenceStack', {
-  env: env,
-  removalPolicy: deployConfig.removalPolicy,
-  rdsScalingAutoPauseMinutes: deployConfig.rdsScalingAutoPauseMinutes,
-  rdsScalingMinCapacity: deployConfig.rdsScalingMinCapacity,
-  rdsScalingMaxCapacity: deployConfig.rdsScalingMaxCapacity,
-  rdsBackupRetentionDays: deployConfig.rdsBackupRetentionDays,
-  rdsSecretRotationDays: deployConfig.rdsSecretRotationDays,
+const devPersistenceStack = new PersistenceStack(app, 'DevPersistenceStack', {
+  env: devEnv,
+  removalPolicy: cdk.RemovalPolicy.DESTROY,
+  rdsScalingAutoPauseMinutes: cdk.Duration.minutes(5),
+  rdsScalingMinCapacity: rds.AuroraCapacityUnit.ACU_2,
+  rdsScalingMaxCapacity: rds.AuroraCapacityUnit.ACU_8,
+  rdsBackupRetentionDays: cdk.Duration.days(1),
+  rdsSecretRotationDays: cdk.Duration.days(1),
 });
+
+const devComputeStack = new ComputeStack(app, 'DevComputeStack', {
+  env: devEnv,
+  bastionInstanceType: ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE3_AMD, ec2.InstanceSize.MICRO),
+  rdsAccessSg: devPersistenceStack.database.accessSg,
+  rdsUserSecret: devPersistenceStack.database.userSecret,
+  usersLambdaTimeout: cdk.Duration.seconds(10),
+});
+devComputeStack.addDependency(devPersistenceStack);
 
 /*
-new computeStack(app, 'ComputeStack', {
-  env: env,
-  rdsCluster: persistenceStack.databaseConstruct.cluster,
-  rdsUserSecret: persistenceStack.databaseConstruct.userSecret,
+new MonitoringStack(app, 'DevMonitoringStack', {
+  env: devEnv,
 });
-computeStack.addDependency(persistenceStack);
+*/
 
-new MonitoringStack(app, 'MonitoringStack', {
+const prodPersistenceStack = new PersistenceStack(app, 'ProdPersistenceStack', {
+  env: prodEnv,
+  removalPolicy: cdk.RemovalPolicy.RETAIN,
+  rdsScalingAutoPauseMinutes: cdk.Duration.minutes(5),
+  rdsScalingMinCapacity: rds.AuroraCapacityUnit.ACU_4,
+  rdsScalingMaxCapacity: rds.AuroraCapacityUnit.ACU_16,
+  rdsBackupRetentionDays: cdk.Duration.days(30),
+  rdsSecretRotationDays: cdk.Duration.days(14),
 });
 
-const apigatewayStack = new ApigatewayStack(app, 'ApigatewayStack', {
-  env: env,
-  zone: domainStack.zone,
-  usersLambda: usersLambdaStack.handler,
+const prodComputeStack = new ComputeStack(app, 'ProdComputeStack', {
+  env: prodEnv,
+  bastionInstanceType: ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE3_AMD, ec2.InstanceSize.MICRO),
+  rdsAccessSg: prodPersistenceStack.database.accessSg,
+  rdsUserSecret: prodPersistenceStack.database.userSecret,
+  usersLambdaTimeout: cdk.Duration.seconds(20),
 });
-apigatewayStack.addDependency(domainStack);
-apigatewayStack.addDependency(usersLambdaStack);
+prodComputeStack.addDependency(prodPersistenceStack);
+
+/*
+new MonitoringStack(app, 'ProdMonitoringStack', {
+  env: prodEnv,
+});
 */

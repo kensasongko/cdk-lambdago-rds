@@ -6,39 +6,49 @@ import * as lambdago from "@aws-cdk/aws-lambda-go-alpha";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as rds from 'aws-cdk-lib/aws-rds';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 
-interface UsersLambdaStackProps extends StackProps {
-  rdsCluster: rds.ServerlessCluster;
+interface UsersLambdaConstructProps {
+  lambdaTimeout: Duration
+  rdsAccessSg: ec2.SecurityGroup;
   rdsUserSecret: rds.DatabaseSecret;
 }
 
-export class UsersLambdaStack extends Stack {
+export class UsersLambdaConstruct extends Construct {
   public readonly handler: lambdago.GoFunction;
 
-  constructor(scope: Construct, id: string, props: UsersLambdaStackProps) {
-    super(scope, id, props);
+  constructor(scope: Stack, id: string, props: UsersLambdaConstructProps) {
+    super(scope, id);
 
-    const { env, rdsCluster, rdsUserSecret } = props;
+    const databaseName = ssm.StringParameter.valueFromLookup(this, '/cdk/bootstrap/database-name');
 
-    const databaseName = this.node.tryGetContext('databaseName');
+    const vpcId = ssm.StringParameter.valueFromLookup(this, '/cdk/core/vpc-id');
+    const vpc = ec2.Vpc.fromLookup(this, 'Vpc', { vpcId: vpcId});
 
     const lambdaPath = path.join(__dirname, '../sources/users/src');
-    this.handler = new lambdago.GoFunction(this, 'UsersHandler', {
+    this.handler = new lambdago.GoFunction(this, 'UsersLambdaHandler', {
       //runtime: lambdago.Runtime.GO_1_X,
       entry: lambdaPath,
       functionName: 'UsersHandler',
       // Enable X-Ray tracing.
       tracing: lambda.Tracing.ACTIVE,
-      timeout: Duration.seconds(30),
+      timeout: props.lambdaTimeout,
+      // Lambda must be attached to VPC to access RDS
+      // The other alternatives are using RDS Data API or public RDS (currently only available for non-serverless).
+      vpc: vpc,
+      vpcSubnets: {
+        subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
+      },
+      securityGroups: [
+        // Security group to access RDS, defined in RdsStack.
+        props.rdsAccessSg
+      ],  
       environment: {
-        "RDS_SECRET_ARN": rdsUserSecret.secretArn,
-        "RDS_DBNAME": databaseName,
-        "RDS_ARN": rdsCluster.clusterArn,
+        "RDS_SECRET_ARN": props.rdsUserSecret.secretArn,
       }
     });
 
-    rdsUserSecret.grantRead(this.handler);
-    rdsCluster.grantDataApiAccess(this.handler);
+    props.rdsUserSecret.grantRead(this.handler);
   }
 }
 

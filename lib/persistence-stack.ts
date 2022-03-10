@@ -15,12 +15,12 @@ interface PersistenceStackProps extends StackProps {
 }
 
 export class PersistenceStack extends Stack {
-  public readonly databaseConstruct: DatabaseConstruct;
+  public readonly database: DatabaseConstruct;
 
   constructor(scope: App, id: string, props: PersistenceStackProps) {
     super(scope, id, props);
 
-    this.databaseConstruct = new DatabaseConstruct(this, 'DatabaseConstruct', {
+    this.database = new DatabaseConstruct(this, 'DatabaseConstruct', {
       removalPolicy: props.removalPolicy,
       rdsScalingAutoPauseMinutes: props.rdsScalingAutoPauseMinutes,
       rdsScalingMinCapacity: props.rdsScalingMinCapacity,
