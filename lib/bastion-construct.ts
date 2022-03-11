@@ -25,14 +25,8 @@ export class BastionConstruct extends Construct {
       },
       instanceType: props.instanceType,
       securityGroup: props.rdsAccessSg,
-      blockDevices: [{
-        deviceName: 'EBSBastionHost',
-        volume: ec2.BlockDeviceVolume.ebs(10, {
-          encrypted: true,
-        }),
-      }],
     });
-    //bastionHost.allowSshAccessFrom(ec2.Peer.anyIpv4());
+    bastionHost.allowSshAccessFrom(ec2.Peer.anyIpv4());
     props.rdsUserSecret.grantRead(bastionHost);
   }
 }

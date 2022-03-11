@@ -4,7 +4,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 
-import { PersistenceStack } from '../lib/persistence-stack';
+import { PersistentStack } from '../lib/persistent-stack';
 import { ComputeStack } from '../lib/compute-stack';
 //import { MonitoringStack } from "../lib/monitoring-stack";
 
@@ -14,7 +14,7 @@ const prodEnv = env;
 
 const app = new cdk.App();
 
-const devPersistenceStack = new PersistenceStack(app, 'DevPersistenceStack', {
+const devPersistentStack = new PersistentStack(app, 'DevPersistentStack', {
   env: devEnv,
   removalPolicy: cdk.RemovalPolicy.DESTROY,
   rdsScalingAutoPauseMinutes: cdk.Duration.minutes(5),
@@ -27,23 +27,25 @@ const devPersistenceStack = new PersistenceStack(app, 'DevPersistenceStack', {
 const devComputeStack = new ComputeStack(app, 'DevComputeStack', {
   env: devEnv,
   bastionInstanceType: ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE3_AMD, ec2.InstanceSize.MICRO),
-  rdsAccessSg: devPersistenceStack.database.accessSg,
-  rdsUserSecret: devPersistenceStack.database.userSecret,
-  usersLambdaTimeout: cdk.Duration.seconds(10),
+  rdsAccessSg: devPersistentStack.database.accessSg,
+  rdsUserSecret: devPersistentStack.database.userSecret,
+  usersLambdaTimeout: cdk.Duration.seconds(30),
+  //apigatewaySubdomain: "api",
 });
-devComputeStack.addDependency(devPersistenceStack);
+devComputeStack.addDependency(devPersistentStack);
 
 /*
+// Isi cloudwatch
 new MonitoringStack(app, 'DevMonitoringStack', {
   env: devEnv,
 });
 */
 
-const prodPersistenceStack = new PersistenceStack(app, 'ProdPersistenceStack', {
+const prodPersistentStack = new PersistentStack(app, 'ProdPersistentStack', {
   env: prodEnv,
   removalPolicy: cdk.RemovalPolicy.RETAIN,
-  rdsScalingAutoPauseMinutes: cdk.Duration.minutes(5),
-  rdsScalingMinCapacity: rds.AuroraCapacityUnit.ACU_4,
+  rdsScalingAutoPauseMinutes: cdk.Duration.minutes(0),
+  rdsScalingMinCapacity: rds.AuroraCapacityUnit.ACU_2,
   rdsScalingMaxCapacity: rds.AuroraCapacityUnit.ACU_16,
   rdsBackupRetentionDays: cdk.Duration.days(30),
   rdsSecretRotationDays: cdk.Duration.days(14),
@@ -52,11 +54,12 @@ const prodPersistenceStack = new PersistenceStack(app, 'ProdPersistenceStack', {
 const prodComputeStack = new ComputeStack(app, 'ProdComputeStack', {
   env: prodEnv,
   bastionInstanceType: ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE3_AMD, ec2.InstanceSize.MICRO),
-  rdsAccessSg: prodPersistenceStack.database.accessSg,
-  rdsUserSecret: prodPersistenceStack.database.userSecret,
+  rdsAccessSg: prodPersistentStack.database.accessSg,
+  rdsUserSecret: prodPersistentStack.database.userSecret,
   usersLambdaTimeout: cdk.Duration.seconds(20),
+  //apigatewaySubdomain: "api",
 });
-prodComputeStack.addDependency(prodPersistenceStack);
+prodComputeStack.addDependency(prodPersistentStack);
 
 /*
 new MonitoringStack(app, 'ProdMonitoringStack', {

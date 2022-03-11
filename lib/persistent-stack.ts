@@ -5,7 +5,7 @@ import * as rds from 'aws-cdk-lib/aws-rds';
 
 import { DatabaseConstruct } from '../lib/database-construct';
 
-interface PersistenceStackProps extends StackProps {
+interface PersistentStackProps extends StackProps {
   removalPolicy: RemovalPolicy,
   rdsScalingAutoPauseMinutes: Duration,
   rdsScalingMinCapacity: rds.AuroraCapacityUnit,
@@ -14,10 +14,10 @@ interface PersistenceStackProps extends StackProps {
   rdsSecretRotationDays: Duration,
 }
 
-export class PersistenceStack extends Stack {
+export class PersistentStack extends Stack {
   public readonly database: DatabaseConstruct;
 
-  constructor(scope: App, id: string, props: PersistenceStackProps) {
+  constructor(scope: App, id: string, props: PersistentStackProps) {
     super(scope, id, props);
 
     this.database = new DatabaseConstruct(this, 'DatabaseConstruct', {
