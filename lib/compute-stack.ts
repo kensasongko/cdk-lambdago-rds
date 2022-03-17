@@ -10,7 +10,6 @@ import { ApigatewayConstruct } from '../lib/apigateway-construct';
 interface ComputeStackProps extends StackProps {
   bastionInstanceType: ec2.InstanceType;
   usersLambdaTimeout: Duration;
-  rdsAccessSg: ec2.SecurityGroup;
   rdsUserSecret: rds.DatabaseSecret;
 }
 
@@ -20,13 +19,11 @@ export class ComputeStack extends Stack {
 
     const bastionConstruct = new BastionConstruct(this, 'BastionConstruct', {
       instanceType: props.bastionInstanceType,
-      rdsAccessSg: props.rdsAccessSg,
       rdsUserSecret: props.rdsUserSecret,
     });
 
     const usersLambdaConstruct = new UsersLambdaConstruct(this, 'UsersLambdaConstruct', {
       lambdaTimeout: props.usersLambdaTimeout,
-      rdsAccessSg: props.rdsAccessSg,
       rdsUserSecret: props.rdsUserSecret,
     }); 
 

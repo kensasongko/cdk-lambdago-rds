@@ -7,7 +7,6 @@ import * as rds from 'aws-cdk-lib/aws-rds';
 
 interface BastionConstructProps {
   instanceType: ec2.InstanceType;
-  rdsAccessSg: ec2.SecurityGroup;
   rdsUserSecret: rds.DatabaseSecret;
 }
 
@@ -24,7 +23,6 @@ export class BastionConstruct extends Construct {
         subnetType: ec2.SubnetType.PUBLIC,
       },
       instanceType: props.instanceType,
-      securityGroup: props.rdsAccessSg,
     });
     bastionHost.allowSshAccessFrom(ec2.Peer.anyIpv4());
     props.rdsUserSecret.grantRead(bastionHost);

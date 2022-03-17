@@ -7,9 +7,7 @@ import { DatabaseConstruct } from '../lib/database-construct';
 
 interface PersistentStackProps extends StackProps {
   removalPolicy: RemovalPolicy,
-  rdsScalingAutoPauseMinutes: Duration,
-  rdsScalingMinCapacity: rds.AuroraCapacityUnit,
-  rdsScalingMaxCapacity: rds.AuroraCapacityUnit,
+  rdsInstanceType: ec2.InstanceType,
   rdsBackupRetentionDays: Duration,
   rdsSecretRotationDays: Duration,
 }
@@ -22,9 +20,7 @@ export class PersistentStack extends Stack {
 
     this.database = new DatabaseConstruct(this, 'DatabaseConstruct', {
       removalPolicy: props.removalPolicy,
-      rdsScalingAutoPauseMinutes: props.rdsScalingAutoPauseMinutes,
-      rdsScalingMinCapacity: props.rdsScalingMinCapacity,
-      rdsScalingMaxCapacity: props.rdsScalingMaxCapacity,
+      rdsInstanceType: props.rdsInstanceType,
       rdsBackupRetentionDays: props.rdsBackupRetentionDays,
       rdsSecretRotationDays: props.rdsSecretRotationDays,
     }); 

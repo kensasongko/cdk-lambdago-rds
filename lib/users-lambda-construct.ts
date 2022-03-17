@@ -10,7 +10,6 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 
 interface UsersLambdaConstructProps {
   lambdaTimeout: Duration
-  rdsAccessSg: ec2.SecurityGroup;
   rdsUserSecret: rds.DatabaseSecret;
 }
 
@@ -33,16 +32,6 @@ export class UsersLambdaConstruct extends Construct {
       // Enable X-Ray tracing.
       tracing: lambda.Tracing.ACTIVE,
       timeout: props.lambdaTimeout,
-      // Lambda must be attached to VPC to access RDS
-      // The other alternatives are using RDS Data API or public RDS (currently only available for non-serverless).
-      vpc: vpc,
-      vpcSubnets: {
-        subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
-      },
-      securityGroups: [
-        // Security group to access RDS, defined in RdsStack.
-        props.rdsAccessSg
-      ],  
       environment: {
         "RDS_SECRET_ARN": props.rdsUserSecret.secretArn,
       }

@@ -17,20 +17,16 @@ const app = new cdk.App();
 const devPersistentStack = new PersistentStack(app, 'DevPersistentStack', {
   env: devEnv,
   removalPolicy: cdk.RemovalPolicy.DESTROY,
-  rdsScalingAutoPauseMinutes: cdk.Duration.minutes(5),
-  rdsScalingMinCapacity: rds.AuroraCapacityUnit.ACU_2,
-  rdsScalingMaxCapacity: rds.AuroraCapacityUnit.ACU_8,
-  rdsBackupRetentionDays: cdk.Duration.days(1),
+  rdsInstanceType: ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE4_GRAVITON, ec2.InstanceSize.MEDIUM),
+  rdsBackupRetentionDays: cdk.Duration.days(0),
   rdsSecretRotationDays: cdk.Duration.days(1),
 });
 
 const devComputeStack = new ComputeStack(app, 'DevComputeStack', {
   env: devEnv,
   bastionInstanceType: ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE3_AMD, ec2.InstanceSize.MICRO),
-  rdsAccessSg: devPersistentStack.database.accessSg,
   rdsUserSecret: devPersistentStack.database.userSecret,
   usersLambdaTimeout: cdk.Duration.seconds(30),
-  //apigatewaySubdomain: "api",
 });
 devComputeStack.addDependency(devPersistentStack);
 
@@ -44,9 +40,7 @@ new MonitoringStack(app, 'DevMonitoringStack', {
 const prodPersistentStack = new PersistentStack(app, 'ProdPersistentStack', {
   env: prodEnv,
   removalPolicy: cdk.RemovalPolicy.RETAIN,
-  rdsScalingAutoPauseMinutes: cdk.Duration.minutes(0),
-  rdsScalingMinCapacity: rds.AuroraCapacityUnit.ACU_2,
-  rdsScalingMaxCapacity: rds.AuroraCapacityUnit.ACU_16,
+  rdsInstanceType: ec2.InstanceType.of(ec2.InstanceClass.MEMORY6_GRAVITON, ec2.InstanceSize.LARGE),
   rdsBackupRetentionDays: cdk.Duration.days(30),
   rdsSecretRotationDays: cdk.Duration.days(14),
 });
@@ -54,10 +48,8 @@ const prodPersistentStack = new PersistentStack(app, 'ProdPersistentStack', {
 const prodComputeStack = new ComputeStack(app, 'ProdComputeStack', {
   env: prodEnv,
   bastionInstanceType: ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE3_AMD, ec2.InstanceSize.MICRO),
-  rdsAccessSg: prodPersistentStack.database.accessSg,
   rdsUserSecret: prodPersistentStack.database.userSecret,
   usersLambdaTimeout: cdk.Duration.seconds(20),
-  //apigatewaySubdomain: "api",
 });
 prodComputeStack.addDependency(prodPersistentStack);
 
