@@ -17,7 +17,7 @@ const app = new cdk.App();
 const devPersistentStack = new PersistentStack(app, 'DevPersistentStack', {
   env: devEnv,
   removalPolicy: cdk.RemovalPolicy.DESTROY,
-  rdsInstanceType: ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE4_GRAVITON, ec2.InstanceSize.MEDIUM),
+  rdsInstanceType: ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE4_GRAVITON, ec2.InstanceSize.MICRO),
   rdsBackupRetentionDays: cdk.Duration.days(0),
   rdsSecretRotationDays: cdk.Duration.days(1),
 });

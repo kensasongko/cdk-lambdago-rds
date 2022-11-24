@@ -32,7 +32,7 @@ export class DatabaseConstruct extends Construct {
     const engine = rds.DatabaseInstanceEngine.postgres({ version: rds.PostgresEngineVersion.VER_14_1 });
     const instance = new rds.DatabaseInstance(this, 'RdsInstance', {
       engine: engine,
-      instanceType: ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE4_GRAVITON, ec2.InstanceSize.MEDIUM),
+      instanceType: props.rdsInstanceType,
       multiAz: true,
       vpc,
       vpcSubnets: {
